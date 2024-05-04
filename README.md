@@ -13,7 +13,7 @@ Notes:
 - All information is communicated through HTTP status codes:
     - `400` (Bad Request) - "key" was not a query parameter
     - `202` (Accepted) - a read-lock, lock, read-unlock or unlock was accepted by server
-    - `409` (Conflict) - an invalid state has been requested (e.g. locking an already locked key, unlocking an already unlocked, etc.)
+    - `409` (Conflict) - an invalid state has been requested (e.g. locking an already locked key, unlocking an already unlocked key, etc.)
     - `423` (Locked) - the status of the key is unreadable (write-locked)
     - `200` (OK) - the status of the key is readable (only read-lock or less)
 - To keep the service as performant as possible, the internal mutex operations are assessed completely, *then* the HTTP response (I/O bound operation) is complete. 
