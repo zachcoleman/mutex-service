@@ -21,5 +21,10 @@ Notes:
     - In a read-lock heavy environment, there is no guarantee of the ability to obtain a write-lock 
     - Requests may have to be retried to achieve desired functionality
 
+### Read Locks
 
+The need for read-locks depends on the guarantees or lack thereof of the underlying storage system being used. The diagram below shows the danger of omitting read-locks. Note in absence of a queueing system, if there are guarantees around reads initiated before concurrent writes, it is recommended to omit read-locks such that write-locks can be obtained more easily.
 
+<p align="center">
+    <img src="./assets/read-locks.png" width="75%">
+</p>
