@@ -61,7 +61,7 @@ func RLockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 		}
 		mmut.Mut.Unlock()
 
-		// if locked can't rlock
+		// if locked, can't rlock
 		if wlock {
 			w.WriteHeader(http.StatusConflict)
 			w.Write([]byte(fmt.Sprintf("Key: %s locked", val)))
@@ -180,11 +180,13 @@ func main() {
 		RKeys: make(map[string]uint),
 		Mut:   sync.RWMutex{},
 	}
-	mux.HandleFunc("GET /lock", LockHandlerFactory(&mmut))
-	mux.HandleFunc("GET /unlock", UnlockHandlerFactory(&mmut))
-	mux.HandleFunc("GET /rlock", RLockHandlerFactory(&mmut))
-	mux.HandleFunc("GET /runlock", RUnlockHandlerFactory(&mmut))
-	mux.HandleFunc("GET /status", StatusHandlerFactory(&mmut))
+	// 404s for no "key" param value e.g. `?key=blah`
+	// Note: Conflict can efficiently be translated to noop on read unlock
+	mux.HandleFunc("GET /lock", LockHandlerFactory(&mmut))       // 202 (Accepted) or 409 (Conflict)
+	mux.HandleFunc("GET /unlock", UnlockHandlerFactory(&mmut))   // 202 (Accepted) or 409 (Conflict)
+	mux.HandleFunc("GET /rlock", RLockHandlerFactory(&mmut))     // 202 (Accepted) or 409 (Conflict)
+	mux.HandleFunc("GET /runlock", RUnlockHandlerFactory(&mmut)) // 202 (Accepted)
+	mux.HandleFunc("GET /status", StatusHandlerFactory(&mmut))   // 200 (OK) or 423 (Locked)
 	handler := ApplyMiddlewares(mux)
 	log.Fatal(http.ListenAndServe(":8080", handler))
 }
