@@ -16,7 +16,7 @@ type MapMutex struct {
 
 func LockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		val := r.PathValue("key")
+		val := r.URL.Query().Get("key")
 		if val == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("No valid key present"))
@@ -46,7 +46,7 @@ func LockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 
 func RLockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		val := r.PathValue("key")
+		val := r.URL.Query().Get("key")
 		if val == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("No valid key present"))
@@ -74,7 +74,7 @@ func RLockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 
 func UnlockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		val := r.PathValue("key")
+		val := r.URL.Query().Get("key")
 		if val == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("No valid key present"))
@@ -102,7 +102,7 @@ func UnlockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 
 func RUnlockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		val := r.PathValue("key")
+		val := r.URL.Query().Get("key")
 		if val == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("No valid key present"))
@@ -123,7 +123,7 @@ func RUnlockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 
 func StatusHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		val := r.PathValue("key")
+		val := r.URL.Query().Get("key")
 		if val == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("No valid key present"))
@@ -180,11 +180,11 @@ func main() {
 		RKeys: make(map[string]uint),
 		Mut:   sync.RWMutex{},
 	}
-	mux.HandleFunc("GET /lock/{key}", LockHandlerFactory(&mmut))
-	mux.HandleFunc("GET /unlock/{key}", UnlockHandlerFactory(&mmut))
-	mux.HandleFunc("GET /rlock/{key}", RLockHandlerFactory(&mmut))
-	mux.HandleFunc("GET /runlock/{key}", RUnlockHandlerFactory(&mmut))
-	mux.HandleFunc("GET /status/{key}", StatusHandlerFactory(&mmut))
+	mux.HandleFunc("GET /lock", LockHandlerFactory(&mmut))
+	mux.HandleFunc("GET /unlock", UnlockHandlerFactory(&mmut))
+	mux.HandleFunc("GET /rlock", RLockHandlerFactory(&mmut))
+	mux.HandleFunc("GET /runlock", RUnlockHandlerFactory(&mmut))
+	mux.HandleFunc("GET /status", StatusHandlerFactory(&mmut))
 	handler := ApplyMiddlewares(mux)
 	log.Fatal(http.ListenAndServe(":8080", handler))
 }

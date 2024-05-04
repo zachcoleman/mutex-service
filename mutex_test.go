@@ -20,11 +20,11 @@ func RunLocalhost() chan struct{} {
 		RKeys: make(map[string]uint),
 		Mut:   sync.RWMutex{},
 	}
-	mux.HandleFunc("GET /lock/{key}", m.LockHandlerFactory(&mmut))
-	mux.HandleFunc("GET /unlock/{key}", m.UnlockHandlerFactory(&mmut))
-	mux.HandleFunc("GET /rlock/{key}", m.RLockHandlerFactory(&mmut))
-	mux.HandleFunc("GET /runlock/{key}", m.RUnlockHandlerFactory(&mmut))
-	mux.HandleFunc("GET /status/{key}", m.StatusHandlerFactory(&mmut))
+	mux.HandleFunc("GET /lock", m.LockHandlerFactory(&mmut))
+	mux.HandleFunc("GET /unlock", m.UnlockHandlerFactory(&mmut))
+	mux.HandleFunc("GET /rlock", m.RLockHandlerFactory(&mmut))
+	mux.HandleFunc("GET /runlock", m.RUnlockHandlerFactory(&mmut))
+	mux.HandleFunc("GET /status", m.StatusHandlerFactory(&mmut))
 	handler := m.ApplyMiddlewares(mux)
 	server := http.Server{
 		Addr:    ":8080",
@@ -47,31 +47,31 @@ func TestSerial(t *testing.T) {
 		expected []int
 	}{
 		"lock-unlock-good": {
-			input:    []string{"lock/blah", "unlock/blah", "status/blah"},
+			input:    []string{"lock?key=blah", "unlock?key=blah", "status?key=blah"},
 			expected: []int{http.StatusAccepted, http.StatusAccepted, http.StatusOK},
 		},
 		"rlock-lock-runlock-lock": {
-			input:    []string{"rlock/blah", "lock/blah", "runlock/blah", "lock/blah"},
+			input:    []string{"rlock?key=blah", "lock?key=blah", "runlock?key=blah", "lock?key=blah"},
 			expected: []int{http.StatusAccepted, http.StatusConflict, http.StatusAccepted, http.StatusAccepted},
 		},
 		"rlock-status-runlock-status": {
-			input:    []string{"rlock/blah", "status/blah", "runlock/blah", "status/blah"},
+			input:    []string{"rlock?key=blah", "status?key=blah", "runlock?key=blah", "status?key=blah"},
 			expected: []int{http.StatusAccepted, http.StatusOK, http.StatusAccepted, http.StatusOK},
 		},
 		"lock-rlock-unlock-rlock": {
-			input:    []string{"lock/blah", "rlock/blah", "unlock/blah", "rlock/blah"},
+			input:    []string{"lock?key=blah", "rlock?key=blah", "unlock?key=blah", "rlock?key=blah"},
 			expected: []int{http.StatusAccepted, http.StatusConflict, http.StatusAccepted, http.StatusAccepted},
 		},
 		"lock-status-lock": {
-			input:    []string{"lock/blah", "status/blah", "lock/blah"},
+			input:    []string{"lock?key=blah", "status?key=blah", "lock?key=blah"},
 			expected: []int{http.StatusAccepted, http.StatusLocked, http.StatusConflict},
 		},
 		"unlock": {
-			input:    []string{"unlock/blah"},
+			input:    []string{"unlock?key=blah"},
 			expected: []int{http.StatusConflict},
 		},
 		"status-lock-status-unlock-status": {
-			input:    []string{"status/blah", "lock/blah", "status/blah", "unlock/blah", "status/blah"},
+			input:    []string{"status?key=blah", "lock?key=blah", "status?key=blah", "unlock?key=blah", "status?key=blah"},
 			expected: []int{http.StatusOK, http.StatusAccepted, http.StatusLocked, http.StatusAccepted, http.StatusOK},
 		},
 	}
@@ -114,9 +114,9 @@ func BenchmarkRandom(b *testing.B) {
 	rand.Shuffle(len(statuses), func(i, j int) { statuses[i], statuses[j] = statuses[j], statuses[i] })
 	go func(in chan string) {
 		for i := range randKeys {
-			in <- fmt.Sprintf("http://localhost:8080/lock/%s", locks[i])
-			in <- fmt.Sprintf("http://localhost:8080/status/%s", statuses[i])
-			in <- fmt.Sprintf("http://localhost:8080/unlock/%s", unlocks[i])
+			in <- fmt.Sprintf("http://localhost:8080/lock?key=%s", locks[i])
+			in <- fmt.Sprintf("http://localhost:8080/status?key=%s", statuses[i])
+			in <- fmt.Sprintf("http://localhost:8080/unlock?key=%s", unlocks[i])
 		}
 		close(in)
 	}(ch)
@@ -154,11 +154,11 @@ func BenchmarkConsistentLockStatusUnlock(b *testing.B) {
 			count := actionMap[v]
 			switch count {
 			case 0:
-				in <- fmt.Sprintf("http://localhost:8080/lock/%s", v)
+				in <- fmt.Sprintf("http://localhost:8080/lock?key=%s", v)
 			case 1:
-				in <- fmt.Sprintf("http://localhost:8080/status/%s", v)
+				in <- fmt.Sprintf("http://localhost:8080/status?key=%s", v)
 			case 2:
-				in <- fmt.Sprintf("http://localhost:8080/unlock/%s", v)
+				in <- fmt.Sprintf("http://localhost:8080/unlock?key=%s", v)
 			default:
 				b.Errorf("unreachable")
 			}
@@ -201,15 +201,15 @@ func BenchmarkMajorityStatus(b *testing.B) {
 			count := actionMap[v]
 			switch {
 			case count < 5:
-				in <- fmt.Sprintf("http://localhost:8080/status/%s", v)
+				in <- fmt.Sprintf("http://localhost:8080/status?key=%s", v)
 			case count == 5:
-				in <- fmt.Sprintf("http://localhost:8080/lock/%s", v)
+				in <- fmt.Sprintf("http://localhost:8080/lock?key=%s", v)
 			case count < 10:
-				in <- fmt.Sprintf("http://localhost:8080/status/%s", v)
+				in <- fmt.Sprintf("http://localhost:8080/status?key=%s", v)
 			case count == 10:
-				in <- fmt.Sprintf("http://localhost:8080/unlock/%s", v)
+				in <- fmt.Sprintf("http://localhost:8080/unlock?key=%s", v)
 			case count < 20:
-				in <- fmt.Sprintf("http://localhost:8080/status/%s", v)
+				in <- fmt.Sprintf("http://localhost:8080/status?key=%s", v)
 			default:
 				b.Errorf("unreachable")
 			}
@@ -252,11 +252,11 @@ func BenchmarkMajorityReads(b *testing.B) {
 			count := actionMap[v]
 			switch {
 			case count < 10:
-				in <- fmt.Sprintf("http://localhost:8080/rlock/%s", v)
+				in <- fmt.Sprintf("http://localhost:8080/rlock?key=%s", v)
 			case count < 19:
-				in <- fmt.Sprintf("http://localhost:8080/runlock/%s", v)
+				in <- fmt.Sprintf("http://localhost:8080/runlock?key=%s", v)
 			case count < 20:
-				in <- fmt.Sprintf("http://localhost:8080/status/%s", v)
+				in <- fmt.Sprintf("http://localhost:8080/status?key=%s", v)
 			default:
 				b.Errorf("unreachable")
 			}
