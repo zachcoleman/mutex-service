@@ -101,8 +101,8 @@ func TestSerial(t *testing.T) {
 func BenchmarkRandom(b *testing.B) {
 	k := RunLocalhost()
 	client := http.Client{}
-	ch := make(chan string, 100)
-	randKeys := make([]string, 10_000)
+	ch := make(chan string, 10)
+	randKeys := make([]string, 200)
 	for ix := range randKeys {
 		randKeys[ix] = strconv.Itoa(rand.Int())
 	}
@@ -117,11 +117,14 @@ func BenchmarkRandom(b *testing.B) {
 			in <- fmt.Sprintf("http://localhost:8080/lock?key=%s", locks[i])
 			in <- fmt.Sprintf("http://localhost:8080/status?key=%s", statuses[i])
 			in <- fmt.Sprintf("http://localhost:8080/unlock?key=%s", unlocks[i])
+			in <- fmt.Sprintf("http://localhost:8080/lock?key=%s", rlocks[i])
+			in <- fmt.Sprintf("http://localhost:8080/unlock?key=%s", runlocks[i])
 		}
 		close(in)
 	}(ch)
+	b.ResetTimer()
 	wg := sync.WaitGroup{}
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 4; i++ {
 		wg.Add(1)
 		go func(in chan string) {
 			for p := range ch {
@@ -141,7 +144,7 @@ func BenchmarkConsistentLockStatusUnlock(b *testing.B) {
 	k := RunLocalhost()
 	client := http.Client{}
 	ch := make(chan string, 10)
-	randKeys := make([]string, 1_000)
+	randKeys := make([]string, 330)
 	for ix := range randKeys {
 		randKeys[ix] = strconv.Itoa(rand.Int())
 	}
@@ -166,6 +169,7 @@ func BenchmarkConsistentLockStatusUnlock(b *testing.B) {
 		}
 		close(in)
 	}(ch)
+	b.ResetTimer()
 	wg := sync.WaitGroup{}
 	for i := 0; i < 4; i++ {
 		wg.Add(1)
@@ -187,7 +191,7 @@ func BenchmarkMajorityStatus(b *testing.B) {
 	k := RunLocalhost()
 	client := http.Client{}
 	ch := make(chan string, 10)
-	randKeys := make([]string, 100)
+	randKeys := make([]string, 50)
 	for ix := range randKeys {
 		randKeys[ix] = strconv.Itoa(rand.Int())
 	}
@@ -217,6 +221,7 @@ func BenchmarkMajorityStatus(b *testing.B) {
 		}
 		close(in)
 	}(ch)
+	b.ResetTimer()
 	wg := sync.WaitGroup{}
 	for i := 0; i < 4; i++ {
 		wg.Add(1)
@@ -238,7 +243,7 @@ func BenchmarkMajorityReads(b *testing.B) {
 	k := RunLocalhost()
 	client := http.Client{}
 	ch := make(chan string, 10)
-	randKeys := make([]string, 100)
+	randKeys := make([]string, 50)
 	for ix := range randKeys {
 		randKeys[ix] = strconv.Itoa(rand.Int())
 	}
@@ -264,6 +269,7 @@ func BenchmarkMajorityReads(b *testing.B) {
 		}
 		close(in)
 	}(ch)
+	b.ResetTimer()
 	wg := sync.WaitGroup{}
 	for i := 0; i < 4; i++ {
 		wg.Add(1)
