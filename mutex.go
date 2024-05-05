@@ -134,6 +134,12 @@ func StatusHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 	}
 }
 
+func HealthHanderFactor() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
 var port = flag.Int("port", 8080, "port to listen on")
 
 func main() {
@@ -146,6 +152,7 @@ func main() {
 	}
 	// 404s for no "key" param value e.g. `?key=blah`
 	// Note: Conflict can efficiently be translated to noop on read unlock
+	mux.HandleFunc("GET /health", HealthHanderFactor())          // 200 (OK)
 	mux.HandleFunc("GET /lock", LockHandlerFactory(&mmut))       // 202 (Accepted) or 409 (Conflict)
 	mux.HandleFunc("GET /unlock", UnlockHandlerFactory(&mmut))   // 202 (Accepted) or 409 (Conflict)
 	mux.HandleFunc("GET /rlock", RLockHandlerFactory(&mmut))     // 202 (Accepted) or 409 (Conflict)
