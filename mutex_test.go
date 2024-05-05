@@ -20,6 +20,7 @@ func RunLocalhost() chan struct{} {
 		RKeys: make(map[string]uint),
 		Mut:   sync.RWMutex{},
 	}
+	mux.HandleFunc("GET /health", m.HealthHanderFactory())
 	mux.HandleFunc("GET /lock", m.LockHandlerFactory(&mmut))
 	mux.HandleFunc("GET /unlock", m.UnlockHandlerFactory(&mmut))
 	mux.HandleFunc("GET /rlock", m.RLockHandlerFactory(&mmut))
