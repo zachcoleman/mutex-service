@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -132,7 +134,10 @@ func StatusHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 	}
 }
 
+var port = flag.Int("port", 8080, "port to listen on")
+
 func main() {
+	flag.Parse()
 	mux := http.NewServeMux()
 	mmut := MapMutex{
 		Keys:  make(map[string]struct{}),
@@ -147,5 +152,5 @@ func main() {
 	mux.HandleFunc("GET /runlock", RUnlockHandlerFactory(&mmut)) // 202 (Accepted)
 	mux.HandleFunc("GET /status", StatusHandlerFactory(&mmut))   // 200 (OK) or 423 (Locked)
 	handler := ApplyMiddlewares(mux)
-	log.Fatal(http.ListenAndServe(":8080", handler))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *port), handler))
 }
