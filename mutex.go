@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -19,7 +18,6 @@ func LockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 		val := r.URL.Query().Get("key")
 		if val == "" {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("No valid key present"))
 			return
 		}
 
@@ -35,7 +33,6 @@ func LockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 		// if locked or read locks
 		if present || readers > 0 {
 			w.WriteHeader(http.StatusConflict)
-			w.Write([]byte(fmt.Sprintf("Key: %s already locked", val)))
 			return
 		}
 
@@ -49,7 +46,6 @@ func RLockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 		val := r.URL.Query().Get("key")
 		if val == "" {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("No valid key present"))
 			return
 		}
 
@@ -64,7 +60,6 @@ func RLockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 		// if locked, can't rlock
 		if wlock {
 			w.WriteHeader(http.StatusConflict)
-			w.Write([]byte(fmt.Sprintf("Key: %s locked", val)))
 			return
 		}
 		// else
@@ -77,7 +72,6 @@ func UnlockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 		val := r.URL.Query().Get("key")
 		if val == "" {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("No valid key present"))
 			return
 		}
 
@@ -92,7 +86,6 @@ func UnlockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 		// if unlocked
 		if !present {
 			w.WriteHeader(http.StatusConflict)
-			w.Write([]byte(fmt.Sprintf("Key: %s already unlocked", val)))
 			return
 		}
 		// else
@@ -105,7 +98,6 @@ func RUnlockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 		val := r.URL.Query().Get("key")
 		if val == "" {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("No valid key present"))
 			return
 		}
 
@@ -126,7 +118,6 @@ func StatusHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 		val := r.URL.Query().Get("key")
 		if val == "" {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("No valid key present"))
 			return
 		}
 
@@ -138,7 +129,6 @@ func StatusHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 		// if locked
 		if present {
 			w.WriteHeader(http.StatusLocked)
-			w.Write([]byte(fmt.Sprintf("Key: %s locked", val)))
 			return
 		}
 		// if rlocked or unlocked
