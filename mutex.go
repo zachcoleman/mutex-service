@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 	"sync"
-	"time"
 )
 
 type MapMutex struct {
@@ -21,7 +20,7 @@ func LockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 			return
 		}
 
-		// if no readers and not already locked, then lock
+		// if not locked and not read-locked -> lock
 		mmut.Mut.Lock()
 		_, present := mmut.Keys[val]
 		readers := mmut.RKeys[val]
@@ -30,13 +29,11 @@ func LockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 		}
 		mmut.Mut.Unlock()
 
-		// if locked or read locks
+		// if already locked or read-locked
 		if present || readers > 0 {
 			w.WriteHeader(http.StatusConflict)
 			return
 		}
-
-		// else
 		w.WriteHeader(http.StatusAccepted)
 	}
 }
@@ -49,7 +46,7 @@ func RLockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 			return
 		}
 
-		// if no lock, increase reader locks
+		// if not locked -> add read-lock
 		mmut.Mut.Lock()
 		_, wlock := mmut.Keys[val]
 		if !wlock {
@@ -57,12 +54,11 @@ func RLockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 		}
 		mmut.Mut.Unlock()
 
-		// if locked, can't rlock
+		// if already locked
 		if wlock {
 			w.WriteHeader(http.StatusConflict)
 			return
 		}
-		// else
 		w.WriteHeader(http.StatusAccepted)
 	}
 }
@@ -75,7 +71,7 @@ func UnlockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 			return
 		}
 
-		// release lock if present
+		// if locked -> unlock
 		mmut.Mut.Lock()
 		_, present := mmut.Keys[val]
 		if present {
@@ -83,12 +79,11 @@ func UnlockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 		}
 		mmut.Mut.Unlock()
 
-		// if unlocked
+		// if already unlocked
 		if !present {
 			w.WriteHeader(http.StatusConflict)
 			return
 		}
-		// else
 		w.WriteHeader(http.StatusAccepted)
 	}
 }
@@ -101,7 +96,8 @@ func RUnlockHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 			return
 		}
 
-		// release a reader lock if present
+		// if possible -> remove a read-lock
+		// if not possible -> noop
 		mmut.Mut.Lock()
 		readers := mmut.RKeys[val]
 		if readers > 0 {
@@ -121,46 +117,19 @@ func StatusHandlerFactory(mmut *MapMutex) http.HandlerFunc {
 			return
 		}
 
-		// acquire exclusive access, read, and/or perform ops then release
+		// get "readable" status
 		mmut.Mut.RLock()
 		_, present := mmut.Keys[val]
 		mmut.Mut.RUnlock()
 
-		// if locked
+		// if locked -> not readable
 		if present {
 			w.WriteHeader(http.StatusLocked)
 			return
 		}
-		// if rlocked or unlocked
+		// if read-locked or no lock -> readable
 		w.WriteHeader(http.StatusOK)
 	}
-}
-
-func LoggerMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		next.ServeHTTP(w, r)
-		end := time.Now()
-		log.Println(r.Method, r.URL.Path, end.Sub(start))
-	})
-}
-
-func CORSMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		next.ServeHTTP(w, r)
-	})
-}
-
-func ApplyMiddlewares(h http.Handler) http.Handler {
-	mws := []func(http.Handler) http.Handler{
-		LoggerMiddleware,
-		CORSMiddleware,
-	}
-	for _, middleware := range mws {
-		h = middleware(h)
-	}
-	return h
 }
 
 func main() {
