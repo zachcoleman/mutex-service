@@ -1,7 +1,7 @@
 # mutex-service
 A simple string-based mutex service. 
 
-The primary use case considered during implementation was the coordination of access to shared file storage among independent agents. This service can be thought of as a pass-through for Go's `sync.RWMutex` over a string dataset. All storage is ephemeral and in memory. 
+The primary use case considered during implementation was the coordination of access to shared file storage among independent agents. This service can be thought of as a pass-through for Go's `sync.RWMutex` over a string dataset. All storage is ephemeral and in memory. The server is designed to be as thin and lightweight as possible. The resulting uncompressed Docker image is approximately 4.7MB.
 
 See below for possible implementation:
 
